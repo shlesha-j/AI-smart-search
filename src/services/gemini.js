@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const PRIMARY_MODEL = "gemini-2.5-flash";
-const FALLBACK_MODEL = "gemini-2.1";
+const FALLBACK_MODEL = "gemini-2.0-flash";
 
 async function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -40,11 +40,40 @@ async function generateContentWithRetry(prompt, modelName) {
   throw lastError;
 }
 
+function extractJsonFromText(text) {
+  if (!text || typeof text !== "string") {
+    return null;
+  }
+
+  let candidate = text.trim();
+  const fencedMatch = candidate.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fencedMatch) {
+    candidate = fencedMatch[1].trim();
+  }
+
+  const firstBrace = candidate.indexOf("{");
+  const lastBrace = candidate.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    const jsonString = candidate.slice(firstBrace, lastBrace + 1);
+    try {
+      return JSON.parse(jsonString);
+    } catch (error) {
+      // fall through and try the raw candidate
+    }
+  }
+
+  try {
+    return JSON.parse(candidate);
+  } catch (error) {
+    return null;
+  }
+}
+
 export async function searchWithAI(query) {
   const prompt = `
   User Search Query: ${query}
 
-  Return a JSON object:
+  Return a JSON object exactly in this format, without any extra markdown or explanation:
 
   {
     "summary": "...",
@@ -72,10 +101,11 @@ export async function searchWithAI(query) {
     text = await generateContentWithRetry(prompt, FALLBACK_MODEL);
   }
 
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    console.error("Failed to parse Gemini response as JSON:", text, error);
-    return { summary: text, results: [], suggestions: [] };
+  const parsed = extractJsonFromText(text);
+  if (parsed && typeof parsed === "object") {
+    return parsed;
   }
+
+  console.error("Failed to parse Gemini response as JSON:", text);
+  return { summary: text, results: [], suggestions: [] };
 }

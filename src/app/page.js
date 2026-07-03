@@ -63,9 +63,9 @@ export default function Home() {
         </div>
       ) : (
         <>
-          <SearchResults results={results} />
-          <SummaryCard summary={summary} />
-          <Suggestions suggestions={suggestions} />
+          {summary && <SummaryCard summary={summary} />}
+          {results.length > 0 && <SearchResults results={results} />}
+          {suggestions.length > 0 && <Suggestions suggestions={suggestions} />}
         </>
       )}
     </main>
