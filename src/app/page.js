@@ -14,6 +14,7 @@ export default function Home() {
   const [results, setResults] = useState([]);
   const [summary, setSummary] = useState("");
   const [suggestions, setSuggestions] = useState([]);
+  const [activeSuggestion, setActiveSuggestion] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
@@ -37,6 +38,7 @@ export default function Home() {
       setResults(data.results || []);
       setSummary(data.summary || "");
       setSuggestions(data.suggestions || []);
+      setActiveSuggestion("");
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -65,7 +67,13 @@ export default function Home() {
         <>
           {summary && <SummaryCard summary={summary} />}
           {results.length > 0 && <SearchResults results={results} />}
-          {suggestions.length > 0 && <Suggestions suggestions={suggestions} />}
+          {suggestions.length > 0 && (
+            <Suggestions
+              suggestions={suggestions}
+              activeSuggestion={activeSuggestion}
+              onSelectSuggestion={setActiveSuggestion}
+            />
+          )}
         </>
       )}
     </main>
